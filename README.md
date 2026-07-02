@@ -1,107 +1,74 @@
 # Leadly
 
-The full **Leadly** application — a SaaS that helps agencies and freelancers
-find weak local business websites and turn them into paying clients. This repo
-contains both the marketing site and a genuinely functional product app.
+Find weak local websites and turn them into paying clients. Leadly finds local
+businesses, runs a deep automated website audit, scores each as a 0–100
+opportunity, and generates honest, personalized outreach.
 
-> Find weak local websites. Turn them into paying clients.
+This is the full commercial-grade stack: a **FastAPI** backend, a **Next.js**
+frontend, and local AI via **Ollama** — orchestrated with Docker Compose.
 
-Built with Next.js 14 (App Router), React 18, TypeScript and Tailwind CSS.
-No external database or paid API is required — it runs self-contained.
-
-## Features (all working, not mocked)
-
-- **Auth** — email/password signup & login with scrypt-hashed passwords and
-  httpOnly cookie sessions. `/app/*` is guarded server-side.
-- **Business finder** — pulls local businesses by niche + city from **live
-  OpenStreetMap data** (Nominatim geocode → Overpass query), with a
-  deterministic sample fallback when the network is unavailable.
-- **Real website audit engine** — actually fetches a prospect's site and scores
-  it 0–100 across **speed, mobile, SEO, design and security**, producing a
-  health score, an inverse opportunity score, and a concrete list of issues.
-- **Opportunity scoring** — leads are ranked by opportunity (weaker site =
-  hotter lead) across the dashboard and leads table.
-- **Outreach email generator** — writes honest emails built from the real audit
-  findings, in three tones (friendly / direct / formal).
-- **Competitor analysis** — audits nearby businesses in the same trade + city
-  and ranks the prospect against the market average.
-- **Website screenshots** — an SVG site preview per lead (swap in a real
-  screenshot service via `SCREENSHOT_API_URL`).
-- **Lead pipeline** — CRUD leads, filter by status (New → Contacted → Replied →
-  Won / Lost), notes, and a dashboard with pipeline + top opportunities.
-- **CSV export** — download every lead with scores and status.
-- **Public API v1** — token-authenticated `GET /api/v1/leads` and
-  `GET /api/v1/audit?url=` (Bearer token from Settings).
-- **Settings** — edit profile, switch plan (demo), reveal/copy/regenerate API
-  token.
-- Marketing site: landing page, `/privacy` (GDPR), dark mode, SEO
-  (title/meta, Open Graph, JSON-LD, sitemap, robots), cookie consent.
-
-## Pages
-
-| Route | Description |
-| ----- | ----------- |
-| `/` | Marketing landing page |
-| `/privacy` | Privacy, Cookies & GDPR |
-| `/signup`, `/login` | Auth |
-| `/app` | Dashboard (pipeline + top opportunities) |
-| `/app/finder` | Business finder |
-| `/app/leads` | Lead list (filter, bulk audit, export) |
-| `/app/leads/[id]` | Lead workspace (audit, email, competitors, notes) |
-| `/app/settings` | Profile, plan, API token |
-| `/app/api` | API docs & CSV export |
-
-## API
-
-All app endpoints live under `/api/*` and use cookie auth. The public,
-token-authenticated API:
-
-```bash
-# Run a live audit of any URL
-curl "https://getleadly.net/api/v1/audit?url=example.com" \
-  -H "Authorization: Bearer <your-token>"
-
-# List your leads
-curl https://getleadly.net/api/v1/leads \
-  -H "Authorization: Bearer <your-token>"
+```
+frontend/   Next.js + React + TypeScript + Tailwind   (:3000)
+backend/    FastAPI + SQLAlchemy + Alembic            (:8000)
+ollama      Local AI (Docker)                          (:11434)
+docs/       FEATURES.md (roadmap) · SPEC.md (full spec)
 ```
 
-## Getting started
+## Quick start
+
+See **[QUICK_START_OWNER.md](./QUICK_START_OWNER.md)** for the copy-paste path.
+TL;DR with Docker:
 
 ```bash
-npm install
-npm run dev      # http://localhost:3000
+cp .env.example .env          # set SECRET_KEY + OWNER_PASSWORD
+docker compose up -d --build
+docker compose exec ollama ollama pull qwen2.5:7b
+# frontend :3000 · API :8000 · docs :8000/docs
 ```
 
-Then open `/signup`, create an account, and use the finder.
-
-## Build & run
+Local dev without Docker:
 
 ```bash
-npm run build
-npm run start
+cd backend && python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head && python -m app.seed
+uvicorn app.main:app --reload           # :8000
+
+cd ../frontend && npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000/api npm run dev   # :3000
 ```
 
-## How data is stored
+## What works today (backend, tested)
 
-Data persists to a JSON file at `./data/leadly.json` (git-ignored), which is
-fine for a single-process deployment. For multi-instance / serverless hosting,
-swap `lib/store.ts` for Postgres, SQLite or your database of choice — the
-accessor functions are the only thing callers depend on.
+- **Auth** — register/login/logout, JWT access + refresh rotation, Argon2
+  hashing, roles (owner/admin/user).
+- **Licensing** — trial/monthly/annual/lifetime/enterprise with statuses, daily
+  plan-limit enforcement, usage metering, and **device activation**.
+- **Deep audit engine** — really fetches a site and scores 9 categories
+  (technical, SEO, local SEO, conversion, design, copywriting, accessibility,
+  performance, content) with **structured findings** (weight · severity ·
+  reason · fix) and priority bands.
+- **Business finder** — OpenStreetMap (Nominatim + Overpass) with SerpApi seam
+  and deterministic sample fallback, plus **lead deduplication**.
+- **Outreach** — 6 variants (soft/direct/WhatsApp/LinkedIn/2 follow-ups) in
+  multiple languages, template-based with an Ollama hook.
+- **Competitor comparison**, **streamed CSV export**, **admin + account** APIs,
+  **health checks**, and **SSRF protection** (blocks private/loopback IPs).
 
-## Configuration
+Run the tests: `cd backend && . .venv/bin/activate && pytest`
 
-| Env var | Purpose |
-| ------- | ------- |
-| `LEADLY_DATA_DIR` | Override where the JSON store is written |
-| `HTTPS_PROXY` | Honoured by server-side fetches (audit/finder) |
-| `SCREENSHOT_API_URL` | Point the screenshot route at a real service |
+## Documentation
 
-## Notes
+- **[QUICK_START_OWNER.md](./QUICK_START_OWNER.md)** — get running fast.
+- **[OWNER_GUIDE.md](./OWNER_GUIDE.md)** — full operations manual (migrations,
+  licensing, devices, Tauri desktop, Postgres, Stripe, deploy, troubleshooting).
+- **[docs/FEATURES.md](./docs/FEATURES.md)** — 40-section roadmap with status.
+- **[docs/SPEC.md](./docs/SPEC.md)** — the full product specification.
 
-- The audit engine and business finder make real outbound requests. In
-  restricted networks the finder falls back to sample data (flagged in the UI)
-  and unreachable sites are scored as high-opportunity.
-- The email generator is deterministic and needs no API key; to use an LLM,
-  replace the body of `generateEmail()` in `lib/email.ts` with a provider call
-  using `lead.audit.issues`.
+## Status
+
+The **backend is complete and tested** for the current phase (auth, licensing,
+audit, finder, outreach, CRM, exports, admin). The **frontend** currently ships
+the marketing site and the original app UI; rewiring every page to the FastAPI
+backend (via the new `frontend/lib/api.ts` client) is the next phase — tracked
+in `docs/FEATURES.md`.
