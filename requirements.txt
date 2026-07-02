@@ -1,3 +1,0 @@
-# candy-relay uses only the Python standard library — no third-party
-# dependencies. This file is intentionally empty (aside from this note) so
-# deploy platforms that expect a requirements.txt still detect a Python app.
