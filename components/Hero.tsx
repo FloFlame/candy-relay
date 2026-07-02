@@ -60,7 +60,7 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a href="#pricing" className="btn-primary text-base">
+            <a href="/signup" className="btn-primary text-base">
               Start free — 14 days
             </a>
             <a href="#journey" className="btn-ghost text-base">

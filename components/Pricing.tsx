@@ -39,7 +39,7 @@ export function Pricing() {
               <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{plan.blurb}</p>
 
               <a
-                href="#"
+                href="/signup"
                 className={`mt-6 ${plan.featured ? "btn-primary" : "btn-ghost"} w-full`}
               >
                 {plan.cta}

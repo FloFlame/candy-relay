@@ -47,10 +47,10 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <a href="#pricing" className="btn-ghost hidden sm:inline-flex">
+          <a href="/login" className="btn-ghost hidden sm:inline-flex">
             Sign in
           </a>
-          <a href="#pricing" className="btn-primary hidden sm:inline-flex">
+          <a href="/signup" className="btn-primary hidden sm:inline-flex">
             Start free
           </a>
 
@@ -82,8 +82,11 @@ export function Header() {
                 </a>
               </li>
             ))}
-            <li className="mt-2">
-              <a href="#pricing" onClick={() => setOpen(false)} className="btn-primary w-full">
+            <li className="mt-2 flex gap-2">
+              <a href="/login" onClick={() => setOpen(false)} className="btn-ghost w-full">
+                Sign in
+              </a>
+              <a href="/signup" onClick={() => setOpen(false)} className="btn-primary w-full">
                 Start free
               </a>
             </li>

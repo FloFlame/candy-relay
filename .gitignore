@@ -24,6 +24,9 @@ yarn-error.log*
 .env
 .env*.local
 
+# local data store
+/data
+
 # typescript
 *.tsbuildinfo
 

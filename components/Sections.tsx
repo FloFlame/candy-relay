@@ -218,7 +218,7 @@ export function FinalCTA() {
               actually gets replies.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <a href="#pricing" className="btn bg-white text-brand-700 hover:bg-brand-50">
+              <a href="/signup" className="btn bg-white text-brand-700 hover:bg-brand-50">
                 Start free — 14 days
               </a>
               <a href="mailto:sales@getleadly.net" className="btn border border-white/30 text-white hover:bg-white/10">

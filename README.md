@@ -1,39 +1,70 @@
-# Leadly — marketing site
+# Leadly
 
-Marketing website for **Leadly**, a SaaS product that helps agencies and
-freelancers find weak local business websites and turn them into paying
-clients. Built with Next.js (App Router), TypeScript and Tailwind CSS.
+The full **Leadly** application — a SaaS that helps agencies and freelancers
+find weak local business websites and turn them into paying clients. This repo
+contains both the marketing site and a genuinely functional product app.
 
 > Find weak local websites. Turn them into paying clients.
 
-## What's on the page
+Built with Next.js 14 (App Router), React 18, TypeScript and Tailwind CSS.
+No external database or paid API is required — it runs self-contained.
 
-The single-page site follows the product's own workflow and was built from a
-content audit of getleadly.net:
+## Features (all working, not mocked)
 
-- **Hero** with a live-style audit preview (0–100 opportunity score).
-- **Journey** — the four-step Find → Analyse → Connect → Close workflow.
-- **Features** — all eight "Inside Leadly" capabilities.
-- **Testimonials** — social proof from agencies and freelancers.
-- **Pricing** — Trial, Starter (€25/mo), Professional (€65/mo) and Lifetime
-  (€375 one-time), plus an Enterprise strip.
-- **About**, **Resources**, **FAQ** and a closing call-to-action.
-- **/privacy** — Privacy, Cookies & GDPR page.
+- **Auth** — email/password signup & login with scrypt-hashed passwords and
+  httpOnly cookie sessions. `/app/*` is guarded server-side.
+- **Business finder** — pulls local businesses by niche + city from **live
+  OpenStreetMap data** (Nominatim geocode → Overpass query), with a
+  deterministic sample fallback when the network is unavailable.
+- **Real website audit engine** — actually fetches a prospect's site and scores
+  it 0–100 across **speed, mobile, SEO, design and security**, producing a
+  health score, an inverse opportunity score, and a concrete list of issues.
+- **Opportunity scoring** — leads are ranked by opportunity (weaker site =
+  hotter lead) across the dashboard and leads table.
+- **Outreach email generator** — writes honest emails built from the real audit
+  findings, in three tones (friendly / direct / formal).
+- **Competitor analysis** — audits nearby businesses in the same trade + city
+  and ranks the prospect against the market average.
+- **Website screenshots** — an SVG site preview per lead (swap in a real
+  screenshot service via `SCREENSHOT_API_URL`).
+- **Lead pipeline** — CRUD leads, filter by status (New → Contacted → Replied →
+  Won / Lost), notes, and a dashboard with pipeline + top opportunities.
+- **CSV export** — download every lead with scores and status.
+- **Public API v1** — token-authenticated `GET /api/v1/leads` and
+  `GET /api/v1/audit?url=` (Bearer token from Settings).
+- **Settings** — edit profile, switch plan (demo), reveal/copy/regenerate API
+  token.
+- Marketing site: landing page, `/privacy` (GDPR), dark mode, SEO
+  (title/meta, Open Graph, JSON-LD, sitemap, robots), cookie consent.
 
-### Audit weaknesses addressed
+## Pages
 
-The original audit flagged several gaps; this build fixes them:
+| Route | Description |
+| ----- | ----------- |
+| `/` | Marketing landing page |
+| `/privacy` | Privacy, Cookies & GDPR |
+| `/signup`, `/login` | Auth |
+| `/app` | Dashboard (pipeline + top opportunities) |
+| `/app/finder` | Business finder |
+| `/app/leads` | Lead list (filter, bulk audit, export) |
+| `/app/leads/[id]` | Lead workspace (audit, email, competitors, notes) |
+| `/app/settings` | Profile, plan, API token |
+| `/app/api` | API docs & CSV export |
 
-| Audit weakness                     | Fix in this site                                            |
-| ---------------------------------- | ---------------------------------------------------------- |
-| Limited social proof               | Testimonials section + a stats/trust bar                   |
-| Missing About / company info       | Dedicated **About** section and footer company links       |
-| No cookie banner / privacy notice  | Consent `CookieBanner` + full `/privacy` (GDPR) page        |
-| Bare `Leadly` page title, weak SEO | Descriptive title/meta, Open Graph, JSON-LD, sitemap, robots |
-| No resources / blog                | **Resources** section with article cards                   |
-| No GDPR / compliance mention       | GDPR rights, retention and lawful-basis copy on `/privacy` |
-| No dark mode                       | System-aware **dark mode** toggle (no flash of wrong theme) |
-| Accessibility unclear              | Skip link, focus-visible rings, ARIA labels, semantic HTML |
+## API
+
+All app endpoints live under `/api/*` and use cookie auth. The public,
+token-authenticated API:
+
+```bash
+# Run a live audit of any URL
+curl "https://getleadly.net/api/v1/audit?url=example.com" \
+  -H "Authorization: Bearer <your-token>"
+
+# List your leads
+curl https://getleadly.net/api/v1/leads \
+  -H "Authorization: Bearer <your-token>"
+```
 
 ## Getting started
 
@@ -42,19 +73,35 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-## Build
+Then open `/signup`, create an account, and use the finder.
+
+## Build & run
 
 ```bash
 npm run build
 npm run start
 ```
 
-## Tech
+## How data is stored
 
-- [Next.js 14](https://nextjs.org/) App Router
-- [React 18](https://react.dev/)
-- [Tailwind CSS 3](https://tailwindcss.com/)
-- TypeScript
+Data persists to a JSON file at `./data/leadly.json` (git-ignored), which is
+fine for a single-process deployment. For multi-instance / serverless hosting,
+swap `lib/store.ts` for Postgres, SQLite or your database of choice — the
+accessor functions are the only thing callers depend on.
 
-All marketing copy lives in [`lib/content.ts`](lib/content.ts) so it can be
-edited in one place.
+## Configuration
+
+| Env var | Purpose |
+| ------- | ------- |
+| `LEADLY_DATA_DIR` | Override where the JSON store is written |
+| `HTTPS_PROXY` | Honoured by server-side fetches (audit/finder) |
+| `SCREENSHOT_API_URL` | Point the screenshot route at a real service |
+
+## Notes
+
+- The audit engine and business finder make real outbound requests. In
+  restricted networks the finder falls back to sample data (flagged in the UI)
+  and unreachable sites are scored as high-opportunity.
+- The email generator is deterministic and needs no API key; to use an LLM,
+  replace the body of `generateEmail()` in `lib/email.ts` with a provider call
+  using `lead.audit.issues`.

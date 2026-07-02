@@ -230,9 +230,9 @@ export const resources = [
 ];
 
 export const nav = [
-  { label: "How it works", href: "#journey" },
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "About", href: "#about" },
-  { label: "Resources", href: "#resources" },
+  { label: "How it works", href: "/#journey" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "About", href: "/#about" },
+  { label: "Resources", href: "/#resources" },
 ];
