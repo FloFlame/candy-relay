@@ -29,6 +29,12 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, default="user")  # owner | admin | user
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Optional per-user category weight overrides for scoring (JSON: {category: weight}).
+    score_weights: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Single-use tokens for email verification and password reset.
+    verify_token: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    reset_token: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    reset_expires: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     licenses: Mapped[list[License]] = relationship(back_populates="user", cascade="all, delete-orphan")

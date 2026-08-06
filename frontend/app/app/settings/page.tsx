@@ -14,12 +14,30 @@ export default function SettingsPage() {
   const [devices, setDevices] = useState<any[]>([]);
   const [activateKey, setActivateKey] = useState("");
   const [busy, setBusy] = useState("");
+  const [weights, setWeights] = useState<Record<string, number> | null>(null);
+  const [weightsCustom, setWeightsCustom] = useState(false);
 
   useEffect(() => {
     if (user) setName(user.name);
     licenseApi.mine().then(setLicense).catch(() => {});
     licenseApi.devices().then(setDevices).catch(() => {});
+    accountApi.getWeights().then((d) => { setWeights(d.weights); setWeightsCustom(d.custom); }).catch(() => {});
   }, [user]);
+
+  async function saveWeights() {
+    if (!weights) return;
+    setBusy("weights");
+    await accountApi.setWeights(weights);
+    setWeightsCustom(true);
+    setBusy("");
+  }
+  async function resetWeights() {
+    setBusy("weights");
+    await accountApi.resetWeights();
+    const d = await accountApi.getWeights();
+    setWeights(d.weights); setWeightsCustom(false);
+    setBusy("");
+  }
 
   async function saveProfile() {
     setBusy("profile");
@@ -110,6 +128,33 @@ export default function SettingsPage() {
             <input value={activateKey} onChange={(e) => setActivateKey(e.target.value)} placeholder="LEADLY-XXXX-XXXX-XXXX-XXXX" className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-mono text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
             <button onClick={activate} disabled={busy === "activate" || !activateKey} className="btn-ghost disabled:opacity-60">Activate key</button>
           </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900 dark:text-white">Scoring weights</h2>
+            {weightsCustom && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">custom</span>}
+          </div>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Tune how each category counts toward the overall opportunity score.</p>
+          {weights && (
+            <>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {Object.entries(weights).map(([k, v]) => (
+                  <label key={k} className="flex items-center gap-3">
+                    <span className="w-28 shrink-0 text-sm capitalize text-slate-600 dark:text-slate-300">{k.replace("_", " ")}</span>
+                    <input type="range" min={0} max={0.4} step={0.01} value={v}
+                      onChange={(e) => setWeights({ ...weights, [k]: parseFloat(e.target.value) })}
+                      className="flex-1 accent-brand-600" />
+                    <span className="w-10 text-right text-xs tabular-nums text-slate-400">{v.toFixed(2)}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button onClick={saveWeights} disabled={busy === "weights"} className="btn-primary disabled:opacity-60">Save weights</button>
+                <button onClick={resetWeights} disabled={busy === "weights"} className="btn-ghost disabled:opacity-60">Reset to defaults</button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="card">

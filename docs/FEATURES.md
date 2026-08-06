@@ -16,14 +16,14 @@ their weaknesses, generate personalized outreach, turn them into clients.
 | 6 | Google review collection | ⬜ | schema fields present (`google_rating`, `review_count`); collector needs provider |
 | 7 | Review intelligence (copy suggestions from real reviews) | ⬜ | depends on #6 |
 | 8 | Advanced scoring (overall + 9 category scores, priority) | ✅ | `services/scoring.py`, `services/audit.py` |
-| 9 | Transparent, adjustable scoring weights | ✅ | `scoring.DEFAULT_WEIGHTS`; per-issue weight/severity/reason/fix |
+| 9 | Transparent, adjustable scoring weights | ✅ | `scoring.DEFAULT_WEIGHTS` + per-user overrides (`/account/weights`, settings UI) |
 | 10 | Competitor comparison | ✅ | `POST /api/leads/{id}/competitors` |
 | 11 | AI outreach generator (11 languages, honest, findings-based) | ✅ | `services/outreach.py` (5 langs full, others fall back to EN) |
 | 12 | Outreach variants (soft/direct/WhatsApp/LinkedIn/2 follow-ups) | ✅ | `services/outreach.py` |
 | 13 | Multilingual system (per-lead language override) | 🟡 | outreach + lead.language ✅; UI i18n ⬜ |
 | 14 | AI provider modes (OFF/LOCAL_LIGHT/LOCAL_FULL/API_PREMIUM) | ✅ | `config.ai_mode`, `services/ollama_client.py` |
 | 15 | Internal local AI via Docker + Ollama | ✅ | `docker-compose.yml`, startup pull/health |
-| 16 | Website improvement suggestions | 🟡 | findings include fixes; AI suggestion pass ⬜ |
+| 16 | Website improvement suggestions | ✅ | `services/suggestions.py`, `/leads/{id}/suggestions`, lead-detail panel |
 | 17 | Built-in CRM (7 statuses, notes, history) | ✅ | `models.Lead`, `routers/leads.py` (status history ⬜) |
 | 18 | Dashboard pages (search/leads/detail/settings) | 🟡 | backend complete; frontend rewiring in progress |
 | 19 | Exports (CSV, filtered, streamed) | ✅ | `routers/exports.py` (Markdown/PDF ⬜) |
@@ -35,7 +35,7 @@ their weaknesses, generate personalized outreach, turn them into clients.
 | 25 | Storage optimization (compression, cleanup) | ⬜ | planned |
 | 26 | Reliability (graceful degradation, health checks) | ✅ | fallbacks throughout; `GET /api/health` |
 | 27 | Security (key safety, SSRF, private-IP block, URL sanitize) | ✅ | `core/security.py`, never exposes keys to frontend |
-| 28 | Account system (register/login/JWT/refresh/roles) | ✅ | `routers/auth.py` (email verify/reset ⬜) |
+| 28 | Account system (register/login/JWT/refresh/roles) | ✅ | `routers/auth.py` incl. email verification + password reset (`/forgot`, `/reset`) |
 | 29 | Licensing system (types/statuses/limits) | ✅ | `models.License`, `services/plans.py`, admin |
 | 30 | Device activation (limits, offline grace) | ✅ | `routers/licenses.py`, `models.Device` |
 | 31 | Admin dashboard (create/revoke/suspend, users, usage) | ✅ | `routers/admin.py` (backend); admin UI ⬜ |

@@ -95,6 +95,18 @@ def audit_website(raw_url: str) -> dict:
         findings.append(_finding("technical", "No canonical tag", 6, "low",
             "Missing canonical tags can cause duplicate-content issues.",
             "Add a <link rel=\"canonical\"> to the primary URL."))
+    has_analytics = bool(re.search(r"gtag\(|googletagmanager|google-analytics|plausible|matomo|fathom", lower))
+    if not has_analytics:
+        tech -= 5
+        findings.append(_finding("technical", "No analytics detected", 5, "low",
+            "No web analytics found, so the owner is flying blind on traffic.",
+            "Add privacy-friendly analytics (Plausible, Fathom or GA4)."))
+    has_og = bool(soup.find("meta", attrs={"property": re.compile("^og:")}))
+    if not has_og:
+        tech -= 4
+        findings.append(_finding("technical", "No Open Graph tags", 4, "low",
+            "Links shared on social/WhatsApp won't show a rich preview.",
+            "Add og:title, og:description and og:image meta tags."))
     if resp.status_code >= 400:
         tech -= 20
         findings.append(_finding("technical", f"HTTP {resp.status_code}", 20, "critical",

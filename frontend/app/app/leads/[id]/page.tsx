@@ -23,6 +23,7 @@ export default function LeadDetailPage() {
   const [variant, setVariant] = useState("soft_email");
   const [language, setLanguage] = useState("en");
   const [comp, setComp] = useState<CompResult | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, any> | null>(null);
   const [notes, setNotes] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -50,6 +51,7 @@ export default function LeadDetailPage() {
     setBusy("");
   }
   async function runCompetitors() { setBusy("comp"); try { setComp(await leadsApi.competitors(id)); } catch (e) { alert((e as Error).message); } setBusy(""); }
+  async function runSuggestions() { setBusy("sug"); try { const d = await leadsApi.suggestions(id); setSuggestions(d.suggestions); } catch (e) { alert((e as Error).message); } setBusy(""); }
   async function setStatus(status: LeadStatus) { const d = await leadsApi.patch(id, { status }); setLead(d); }
   async function saveNotes() { setBusy("notes"); await leadsApi.patch(id, { notes }); setBusy(""); }
   async function remove() { if (!confirm("Delete this lead?")) return; await leadsApi.remove(id); router.push("/app/leads"); }
@@ -168,6 +170,51 @@ export default function LeadDetailPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Improvement plan */}
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-slate-900 dark:text-white">Improvement plan</h2>
+              <button onClick={runSuggestions} disabled={busy === "sug"} className="btn-ghost px-3 py-1.5 text-sm disabled:opacity-60">{busy === "sug" ? "Building…" : suggestions ? "Rebuild" : "Generate plan"}</button>
+            </div>
+            {!suggestions ? (
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Turn the audit into concrete, pitchable website improvements.</p>
+            ) : (
+              <div className="mt-4 space-y-4 text-sm">
+                <div>
+                  <h3 className="mb-1.5 font-semibold text-slate-900 dark:text-white">Priority fixes</h3>
+                  <ul className="space-y-1.5">
+                    {suggestions.priority_fixes.map((f: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-slate-600 dark:text-slate-300"><span className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />{f}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <h3 className="mb-1.5 font-semibold text-slate-900 dark:text-white">Headline ideas</h3>
+                    <ul className="space-y-1 text-slate-600 dark:text-slate-300">{suggestions.headline_ideas.map((x: string, i: number) => <li key={i}>“{x}”</li>)}</ul>
+                  </div>
+                  <div>
+                    <h3 className="mb-1.5 font-semibold text-slate-900 dark:text-white">Trust section</h3>
+                    <ul className="space-y-1 text-slate-600 dark:text-slate-300">{suggestions.trust_section.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                  </div>
+                  <div>
+                    <h3 className="mb-1.5 font-semibold text-slate-900 dark:text-white">FAQ ideas</h3>
+                    <ul className="space-y-1 text-slate-600 dark:text-slate-300">{suggestions.faq_ideas.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                  </div>
+                  <div>
+                    <h3 className="mb-1.5 font-semibold text-slate-900 dark:text-white">CTAs &amp; badges</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...suggestions.cta_ideas, ...suggestions.trust_badges].map((x: string, i: number) => (
+                        <span key={i} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{x}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="rounded-lg bg-brand-50 px-3 py-2 text-brand-800 dark:bg-brand-950 dark:text-brand-200"><span className="font-medium">Mobile:</span> {suggestions.mobile_sticky_cta}</p>
               </div>
             )}
           </div>

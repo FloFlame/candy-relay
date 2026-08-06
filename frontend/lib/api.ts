@@ -91,6 +91,11 @@ export const authApi = {
   login: (email: string, password: string) =>
     api("/auth/login", { method: "POST", body: { email, password } }),
   me: () => api("/auth/me"),
+  forgot: (email: string) => api("/auth/password/forgot", { method: "POST", body: { email } }),
+  reset: (token: string, new_password: string) =>
+    api("/auth/password/reset", { method: "POST", body: { token, new_password } }),
+  requestVerify: () => api("/auth/verify/request", { method: "POST" }),
+  confirmVerify: (token: string) => api("/auth/verify/confirm", { method: "POST", body: { token } }),
 };
 
 export const finderApi = {
@@ -108,6 +113,7 @@ export const leadsApi = {
   outreach: (id: string, variant: string, language?: string, sender?: string) =>
     api(`/leads/${id}/outreach`, { method: "POST", body: { variant, language, sender } }),
   competitors: (id: string) => api(`/leads/${id}/competitors`, { method: "POST" }),
+  suggestions: (id: string) => api(`/leads/${id}/suggestions`, { method: "POST" }),
 };
 
 export const accountApi = {
@@ -115,6 +121,9 @@ export const accountApi = {
   updateProfile: (name: string) => api("/account/profile", { method: "PATCH", body: { name } }),
   changePassword: (current_password: string, new_password: string) =>
     api("/account/password", { method: "POST", body: { current_password, new_password } }),
+  getWeights: () => api("/account/weights"),
+  setWeights: (weights: Record<string, number>) => api("/account/weights", { method: "PUT", body: { weights } }),
+  resetWeights: () => api("/account/weights", { method: "DELETE" }),
 };
 
 export const licenseApi = {

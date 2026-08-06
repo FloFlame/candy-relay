@@ -41,6 +41,35 @@ def change_password(body: PasswordIn, user: User = Depends(get_current_user), db
     return {"ok": True}
 
 
+class WeightsIn(BaseModel):
+    weights: dict[str, float]
+
+
+@router.get("/weights")
+def get_weights(user: User = Depends(get_current_user)):
+    from ..services.scoring import DEFAULT_WEIGHTS
+    return {"weights": user.score_weights or DEFAULT_WEIGHTS, "defaults": DEFAULT_WEIGHTS,
+            "custom": user.score_weights is not None}
+
+
+@router.put("/weights")
+def set_weights(body: WeightsIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from ..services.scoring import CATEGORIES
+    cleaned = {k: float(v) for k, v in body.weights.items() if k in CATEGORIES and v >= 0}
+    if not cleaned:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No valid category weights provided")
+    user.score_weights = cleaned
+    db.commit()
+    return {"weights": cleaned}
+
+
+@router.delete("/weights")
+def reset_weights(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user.score_weights = None
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/usage")
 def usage(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     lic = active_license(db, user)

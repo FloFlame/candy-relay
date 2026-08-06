@@ -14,6 +14,7 @@ from ..services import audit as audit_svc
 from ..services import finder as finder_svc
 from ..services import outreach as outreach_svc
 from ..services import scoring
+from ..services import suggestions as suggestions_svc
 
 router = APIRouter(prefix="/leads", tags=["leads"])
 
@@ -101,6 +102,10 @@ def run_audit(lead_id: str, user: User = Depends(get_current_user),
     lead = _get_lead(db, user, lead_id)
     enforce_and_count(db, user, lic, "audits", "audits_per_day")
     result = audit_svc.audit_website(lead.website)
+    # Apply this user's custom category weights, if any (adjustable scoring).
+    if user.score_weights:
+        result["overall_score"] = scoring.compute_overall(result["category_scores"], user.score_weights)
+        result["priority"] = scoring.priority_band(result["overall_score"])
     audit = Audit(lead_id=lead.id, **{k: result[k] for k in (
         "reachable", "final_url", "status_code", "response_ms", "html_hash",
         "overall_score", "priority", "category_scores", "findings", "meta")})
@@ -169,6 +174,29 @@ def competitors(lead_id: str, user: User = Depends(get_current_user),
         "competitors": results, "market_average_health": avg,
         "beats_market": (self_health >= avg) if (self_health is not None and avg is not None) else None,
     }
+
+
+@router.post("/{lead_id}/suggestions")
+def suggestions(lead_id: str, user: User = Depends(get_current_user),
+                lic: License = Depends(require_license), db: Session = Depends(get_db)):
+    lead = _get_lead(db, user, lead_id)
+    latest = db.scalar(select(Audit).where(Audit.lead_id == lead.id).order_by(Audit.created_at.desc()))
+    if not latest:
+        result = audit_svc.audit_website(lead.website)
+        latest = Audit(lead_id=lead.id, **{k: result[k] for k in (
+            "reachable", "final_url", "status_code", "response_ms", "html_hash",
+            "overall_score", "priority", "category_scores", "findings", "meta")})
+        db.add(latest)
+        lead.overall_score = result["overall_score"]
+        lead.priority = result["priority"]
+        db.commit()
+        db.refresh(latest)
+    lead_dict = {
+        "business_name": lead.business_name, "category": lead.category, "city": lead.city,
+        "google_rating": lead.google_rating, "review_count": lead.review_count,
+    }
+    audit_dict = {"category_scores": latest.category_scores, "findings": latest.findings}
+    return {"suggestions": suggestions_svc.generate_suggestions(lead_dict, audit_dict)}
 
 
 def _audit_dict(a: Audit) -> dict:

@@ -69,6 +69,12 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </button>
         </form>
 
+        {!isSignup && (
+          <p className="mt-4 text-center text-sm">
+            <Link href="/forgot" className="font-medium text-slate-500 hover:text-brand-600 dark:text-slate-400">Forgot password?</Link>
+          </p>
+        )}
+
         {isSignup && (
           <p className="mt-4 text-center text-xs text-slate-400">
             By continuing you agree to our{" "}
