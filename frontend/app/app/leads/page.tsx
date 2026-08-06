@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { leadsApi, download } from "@/lib/api";
+import { leadsApi, jobsApi, download } from "@/lib/api";
 import type { Lead, LeadStatus } from "@/lib/types";
 import { LEAD_STATUSES } from "@/lib/types";
 import { priorityTone, STATUS_STYLES, hostOf } from "@/lib/ui";
@@ -10,8 +10,7 @@ import { priorityTone, STATUS_STYLES, hostOf } from "@/lib/ui";
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[] | null>(null);
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
-  const [auditingAll, setAuditingAll] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [job, setJob] = useState<{ status: string; done: number; total: number } | null>(null);
 
   async function load() {
     const d = await leadsApi.list("?page_size=500");
@@ -23,18 +22,28 @@ export default function LeadsPage() {
 
   const shown = (leads || []).filter((l) => filter === "all" || l.status === filter);
   const unaudited = (leads || []).filter((l) => l.overall_score == null);
+  const auditing = job != null && (job.status === "queued" || job.status === "running");
 
+  // Run bulk audit as a background job and poll its progress.
   async function auditAll() {
     if (!leads) return;
-    setAuditingAll(true);
-    setProgress(0);
-    const targets = leads.filter((l) => l.overall_score == null);
-    for (let i = 0; i < targets.length; i++) {
-      try { await leadsApi.audit(targets[i].id); } catch {}
-      setProgress(i + 1);
+    try {
+      const created = await jobsApi.create("audit_all");
+      setJob({ status: created.status, done: 0, total: created.total });
+      const poll = setInterval(async () => {
+        try {
+          const j = await jobsApi.get(created.id);
+          setJob({ status: j.status, done: j.done, total: j.total });
+          if (["done", "failed", "cancelled"].includes(j.status)) {
+            clearInterval(poll);
+            await load();
+            setTimeout(() => setJob(null), 1500);
+          }
+        } catch { clearInterval(poll); setJob(null); }
+      }, 1200);
+    } catch (e) {
+      alert((e as Error).message);
     }
-    await load();
-    setAuditingAll(false);
   }
 
   return (
@@ -45,9 +54,9 @@ export default function LeadsPage() {
           <p className="mt-1 text-slate-500 dark:text-slate-400">Every prospect and its status in one view.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {unaudited.length > 0 && (
-            <button onClick={auditAll} disabled={auditingAll} className="btn-ghost px-4 py-2 text-sm disabled:opacity-60">
-              {auditingAll ? `Auditing ${progress}/${unaudited.length}…` : `Audit ${unaudited.length} pending`}
+          {(unaudited.length > 0 || auditing) && (
+            <button onClick={auditAll} disabled={auditing} className="btn-ghost px-4 py-2 text-sm disabled:opacity-60">
+              {auditing ? `Auditing ${job!.done}/${job!.total || unaudited.length}…` : `Audit ${unaudited.length} pending`}
             </button>
           )}
           <button onClick={() => download("/exports/leads.csv", "leadly-leads.csv")} className="btn-ghost px-4 py-2 text-sm">Export CSV</button>

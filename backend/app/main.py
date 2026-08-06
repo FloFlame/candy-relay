@@ -12,7 +12,8 @@ from .db import init_db, SessionLocal
 from .models import User
 from .core.security import hash_password
 from .services import ollama_client
-from .routers import auth, account, admin, licenses, finder, leads, exports, health
+from .services import jobs as jobs_svc
+from .routers import auth, account, admin, licenses, finder, leads, exports, health, jobs
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 log = logging.getLogger("leadly")
@@ -37,6 +38,7 @@ def bootstrap_owner() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     bootstrap_owner()
+    jobs_svc.start_worker()
     if ollama_client.is_enabled():
         h = ollama_client.health()
         if h.get("reachable"):
@@ -59,7 +61,7 @@ app.add_middleware(
 
 API = "/api"
 for r in (health.router, auth.router, account.router, admin.router,
-          licenses.router, finder.router, leads.router, exports.router):
+          licenses.router, finder.router, leads.router, exports.router, jobs.router):
     app.include_router(r, prefix=API)
 
 

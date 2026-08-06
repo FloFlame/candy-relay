@@ -173,6 +173,25 @@ class Outreach(Base):
     lead: Mapped[Lead] = relationship(back_populates="outreach")
 
 
+class Job(Base):
+    __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_user_status", "user_id", "status"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid("job"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    type: Mapped[str] = mapped_column(String)  # audit_all | audit_leads | ...
+    status: Mapped[str] = mapped_column(String, default="queued")  # queued|running|done|failed|cancelled
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    done: Mapped[int] = mapped_column(Integer, default=0)
+    step: Mapped[str] = mapped_column(String, default="")
+    error: Mapped[str] = mapped_column(Text, default="")
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class UsageCounter(Base):
     __tablename__ = "usage_counters"
     __table_args__ = (UniqueConstraint("user_id", "day", name="uq_usage_day"),)

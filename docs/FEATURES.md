@@ -28,8 +28,8 @@ their weaknesses, generate personalized outreach, turn them into clients.
 | 18 | Dashboard pages (search/leads/detail/settings) | 🟡 | backend complete; frontend rewiring in progress |
 | 19 | Exports (CSV, filtered, streamed) | ✅ | `routers/exports.py` (Markdown/PDF ⬜) |
 | 20 | Performance & cost optimization (rules-first, cache, HTML hash) | 🟡 | HTML hash + usage metering ✅; result cache ⬜ |
-| 21 | Background jobs (queue, progress, retry) | ⬜ | synchronous now; queue planned |
-| 22 | Concurrency & throttling (rate limits, backoff) | 🟡 | per-domain concurrency config + timeouts; full limiter ⬜ |
+| 21 | Background jobs (queue, progress, retry) | ✅ | `services/jobs.py` worker + `/jobs` API (create/list/get/cancel/retry); bulk audit runs as a job with live progress |
+| 22 | Concurrency & throttling (rate limits, backoff) | 🟡 | bounded ThreadPool per job + per-domain concurrency config + timeouts; global rate limiter ⬜ |
 | 23 | Database optimization (indexes, files outside DB) | ✅ | indexes on models; storage dir for files |
 | 24 | Frontend optimization (server filtering/paging, virtualized) | 🟡 | API paginates/sorts; virtualized table ⬜ |
 | 25 | Storage optimization (compression, cleanup) | ⬜ | planned |

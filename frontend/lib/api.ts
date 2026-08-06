@@ -134,6 +134,15 @@ export const licenseApi = {
   deactivate: (id: string) => api(`/licenses/devices/${id}`, { method: "DELETE" }),
 };
 
+export const jobsApi = {
+  create: (type = "audit_all", lead_ids?: string[]) =>
+    api("/jobs", { method: "POST", body: { type, lead_ids } }),
+  get: (id: string) => api(`/jobs/${id}`),
+  list: () => api("/jobs"),
+  cancel: (id: string) => api(`/jobs/${id}/cancel`, { method: "POST" }),
+  retry: (id: string) => api(`/jobs/${id}/retry`, { method: "POST" }),
+};
+
 export const adminApi = {
   stats: () => api("/admin/stats"),
   users: (q = "") => api(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`),
