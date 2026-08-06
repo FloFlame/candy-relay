@@ -41,6 +41,11 @@ export default function LeadDetailPage() {
     try {
       const d = await leadsApi.outreach(id, variant, language);
       setOutreach((prev) => [...d.outreach, ...prev]);
+      // Outreach auto-audits on the server when needed; refresh so the audit
+      // panel reflects any newly created audit.
+      const fresh = await leadsApi.get(id);
+      setLead(fresh.lead);
+      setAudit(fresh.audit);
     } catch (e) { alert((e as Error).message); }
     setBusy("");
   }

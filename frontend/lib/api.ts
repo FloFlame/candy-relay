@@ -60,7 +60,11 @@ export async function api<T = any>(
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      detail = (await res.json()).detail || detail;
+      const body = await res.json();
+      const d = body.detail;
+      if (typeof d === "string") detail = d;
+      else if (Array.isArray(d)) detail = d.map((e: any) => e.msg || JSON.stringify(e)).join("; ");
+      else if (d) detail = JSON.stringify(d);
     } catch {}
     throw new Error(detail);
   }
