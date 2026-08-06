@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "../Logo";
 import { ThemeToggle } from "../ThemeToggle";
+import { useAuth } from "../AuthProvider";
+import type { User } from "@/lib/types";
 
-const links = [
+const baseLinks = [
   { href: "/app", label: "Dashboard", icon: "grid" },
   { href: "/app/finder", label: "Business finder", icon: "search" },
   { href: "/app/leads", label: "Leads", icon: "list" },
@@ -30,24 +32,20 @@ const icons: Record<string, React.ReactNode> = {
     </>
   ),
   code: <path d="m8 6-6 6 6 6M16 6l6 6-6 6" />,
+  shield: <path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3z" />,
 };
 
-export function AppShell({
-  user,
-  children,
-}: {
-  user: { name: string; email: string; plan: string };
-  children: React.ReactNode;
-}) {
+export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { logout } = useAuth();
   const [open, setOpen] = useState(false);
 
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
+  const links = [
+    ...baseLinks,
+    ...(user.role === "owner" || user.role === "admin"
+      ? [{ href: "/app/admin", label: "Admin", icon: "shield" as const }]
+      : []),
+  ];
 
   const isActive = (href: string) =>
     href === "/app" ? pathname === "/app" : pathname.startsWith(href);
@@ -74,41 +72,40 @@ export function AppShell({
     </nav>
   );
 
+  const footer = (
+    <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+      <div className="mb-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
+        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
+        <p className="truncate text-xs capitalize text-slate-500 dark:text-slate-400">{user.role}</p>
+      </div>
+      <button onClick={logout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+        Sign out
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Sidebar (desktop) */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex dark:border-slate-800 dark:bg-slate-900">
         <div className="flex h-16 items-center border-b border-slate-200 px-5 dark:border-slate-800">
           <Link href="/app"><Logo /></Link>
         </div>
         {nav}
-        <div className="border-t border-slate-200 p-3 dark:border-slate-800">
-          <div className="mb-2 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{user.name}</p>
-            <p className="truncate text-xs capitalize text-slate-500 dark:text-slate-400">{user.plan} plan</p>
-          </div>
-          <button onClick={logout} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
-            Sign out
-          </button>
-        </div>
+        {footer}
       </aside>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-slate-900">
             <div className="flex h-16 items-center border-b border-slate-200 px-5 dark:border-slate-800"><Logo /></div>
             {nav}
-            <div className="border-t border-slate-200 p-3 dark:border-slate-800">
-              <button onClick={logout} className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Sign out</button>
-            </div>
+            {footer}
           </aside>
         </div>
       )}
 
-      {/* Main */}
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur sm:px-6 dark:border-slate-800 dark:bg-slate-900/80">
           <button onClick={() => setOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 lg:hidden dark:border-slate-800" aria-label="Open menu">
@@ -117,7 +114,7 @@ export function AppShell({
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <a href="/app/finder" className="btn-primary hidden px-4 py-2 text-sm sm:inline-flex">Find businesses</a>
+            <Link href="/app/finder" className="btn-primary hidden px-4 py-2 text-sm sm:inline-flex">Find businesses</Link>
           </div>
         </header>
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>

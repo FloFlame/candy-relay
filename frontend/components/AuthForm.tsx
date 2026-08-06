@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { authApi, setTokens, isAuthed } from "@/lib/api";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -14,20 +15,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (isAuthed()) router.replace("/app");
+  }, [router]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setBusy(true);
     try {
-      const res = await fetch(`/api/auth/${mode}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(isSignup ? { name, email, password } : { email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      const data = isSignup
+        ? await authApi.register(email, password, name)
+        : await authApi.login(email, password);
+      setTokens(data.access_token, data.refresh_token);
       router.push("/app");
-      router.refresh();
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -67,6 +68,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             {busy ? "Please wait…" : isSignup ? "Create account" : "Sign in"}
           </button>
         </form>
+
+        {isSignup && (
+          <p className="mt-4 text-center text-xs text-slate-400">
+            By continuing you agree to our{" "}
+            <Link href="/privacy" className="underline">privacy policy</Link>.
+          </p>
+        )}
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           {isSignup ? (

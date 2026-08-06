@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { leadsApi, download } from "@/lib/api";
 import type { Lead, LeadStatus } from "@/lib/types";
 import { LEAD_STATUSES } from "@/lib/types";
-import { opportunityTone, STATUS_STYLES, hostOf } from "@/lib/ui";
+import { priorityTone, STATUS_STYLES, hostOf } from "@/lib/ui";
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[] | null>(null);
@@ -13,24 +14,23 @@ export default function LeadsPage() {
   const [progress, setProgress] = useState(0);
 
   async function load() {
-    const res = await fetch("/api/leads");
-    const data = await res.json();
-    setLeads(data.leads || []);
+    const d = await leadsApi.list("?page_size=500");
+    setLeads(d.leads || []);
   }
   useEffect(() => {
-    load();
+    load().catch(() => setLeads([]));
   }, []);
 
   const shown = (leads || []).filter((l) => filter === "all" || l.status === filter);
-  const unaudited = (leads || []).filter((l) => !l.audit);
+  const unaudited = (leads || []).filter((l) => l.overall_score == null);
 
   async function auditAll() {
     if (!leads) return;
     setAuditingAll(true);
     setProgress(0);
-    const targets = leads.filter((l) => !l.audit);
+    const targets = leads.filter((l) => l.overall_score == null);
     for (let i = 0; i < targets.length; i++) {
-      await fetch(`/api/leads/${targets[i].id}/audit`, { method: "POST" });
+      try { await leadsApi.audit(targets[i].id); } catch {}
       setProgress(i + 1);
     }
     await load();
@@ -50,25 +50,18 @@ export default function LeadsPage() {
               {auditingAll ? `Auditing ${progress}/${unaudited.length}…` : `Audit ${unaudited.length} pending`}
             </button>
           )}
-          <a href="/api/leads/export" className="btn-ghost px-4 py-2 text-sm">Export CSV</a>
+          <button onClick={() => download("/exports/leads.csv", "leadly-leads.csv")} className="btn-ghost px-4 py-2 text-sm">Export CSV</button>
           <Link href="/app/finder" className="btn-primary px-4 py-2 text-sm">Find more</Link>
         </div>
       </div>
 
-      {/* Filter chips */}
       <div className="mt-6 flex flex-wrap gap-2">
         {[{ value: "all", label: "All" }, ...LEAD_STATUSES].map((s) => {
           const count = s.value === "all" ? leads?.length ?? 0 : (leads || []).filter((l) => l.status === s.value).length;
           return (
-            <button
-              key={s.value}
-              onClick={() => setFilter(s.value as LeadStatus | "all")}
+            <button key={s.value} onClick={() => setFilter(s.value as LeadStatus | "all")}
               className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-                filter === s.value
-                  ? "bg-brand-600 text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
-            >
+                filter === s.value ? "bg-brand-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"}`}>
               {s.label} <span className="opacity-60">{count}</span>
             </button>
           );
@@ -76,11 +69,7 @@ export default function LeadsPage() {
       </div>
 
       {leads === null ? (
-        <div className="mt-6 space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
-          ))}
-        </div>
+        <div className="mt-6 space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />)}</div>
       ) : shown.length === 0 ? (
         <div className="card mt-6 py-16 text-center">
           <p className="text-slate-500 dark:text-slate-400">No leads here yet.</p>
@@ -99,23 +88,19 @@ export default function LeadsPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {shown.map((l) => {
-                const tone = opportunityTone(l.score);
+                const tone = priorityTone(l.priority);
+                const opp = l.overall_score != null ? 100 - l.overall_score : null;
                 return (
                   <tr key={l.id} className="bg-white transition hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50">
                     <td className="px-4 py-3">
-                      <Link href={`/app/leads/${l.id}`} className="font-medium text-slate-900 hover:text-brand-600 dark:text-white">
-                        {l.businessName}
-                      </Link>
+                      <Link href={`/app/leads/${l.id}`} className="font-medium text-slate-900 hover:text-brand-600 dark:text-white">{l.business_name}</Link>
                       <div className="text-xs text-slate-400">{l.city}</div>
                     </td>
                     <td className="hidden px-4 py-3 text-slate-500 sm:table-cell dark:text-slate-400">{hostOf(l.website)}</td>
                     <td className="px-4 py-3">
-                      {l.score == null ? (
-                        <span className="text-slate-400">—</span>
-                      ) : (
+                      {opp == null ? <span className="text-slate-400">—</span> : (
                         <span className={`inline-flex items-center gap-1.5 font-semibold ${tone.text}`}>
-                          <span className="inline-block h-2 w-2 rounded-full" style={{ background: tone.ring }} />
-                          {l.score}
+                          <span className="inline-block h-2 w-2 rounded-full" style={{ background: tone.ring }} />{opp}
                         </span>
                       )}
                     </td>

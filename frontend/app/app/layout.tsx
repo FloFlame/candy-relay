@@ -1,21 +1,33 @@
-import { redirect } from "next/navigation";
-import type { Metadata } from "next";
-import { getCurrentUser } from "@/lib/auth";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
 
-export const metadata: Metadata = {
-  title: "Dashboard",
-  robots: { index: false, follow: false },
-};
+function Guard({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-export const dynamic = "force-dynamic";
+  useEffect(() => {
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  return <AppShell user={user}>{children}</AppShell>;
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = getCurrentUser();
-  if (!user) redirect("/login");
   return (
-    <AppShell user={{ name: user.name, email: user.email, plan: user.plan }}>
-      {children}
-    </AppShell>
+    <AuthProvider>
+      <Guard>{children}</Guard>
+    </AuthProvider>
   );
 }
